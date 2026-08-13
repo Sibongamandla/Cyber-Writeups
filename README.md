@@ -12,7 +12,7 @@ More writeups coming as I work through new rooms.
 
 | Room | Platform | Categories Covered |
 |---|---|---|
-| [OWASP Juice Shop](./OWASP%20JUICE%20SHOP%20/OWASP-Juice-Shop-Writeup.md) | TryHackMe | SQLi, Broken Auth, Sensitive Data Exposure, Broken Access Control, XSS |
+| [OWASP Juice Shop](./OWASP-Juice-Shop/OWASP-Juice-Shop-Writeup.md) | TryHackMe | SQLi, Broken Auth, Sensitive Data Exposure, Broken Access Control, XSS |
 
 ---
 
