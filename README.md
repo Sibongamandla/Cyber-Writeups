@@ -14,6 +14,8 @@ More writeups coming as I work through new rooms.
 |---|---|---|
 | [OWASP Juice Shop](./OWASP-Juice-Shop/OWASP-Juice-Shop-Writeup.md) | TryHackMe | SQLi, Broken Auth, Sensitive Data Exposure, Broken Access Control, XSS |
 | [Pickle Rick](./Pickle-Rick-CTF/Pickle-Rick-Writeup.md) | TryHackMe | Web Enumeration, Command Injection, Privilege Escalation |
+| [DogCat](./DogCat/Writeup.md) | TryHackMe | Local File Inclusion (LFI), Apache Log Poisoning, Privilege Escalation, Docker Container Escape |
+
 
 ---
 
