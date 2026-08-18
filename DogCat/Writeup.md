@@ -12,16 +12,14 @@ This writeup walks through how I rooted the machine on TryHackMe (https://tryhac
 
 - **Target IP:** `10.80.184.61`
 - **Attacker box:** Kali Linux
-- **Tooling:** Firefox, Nmap, curl, netcat, browser Inspector
+- **Tooling:** Firefox, Nmap, curl, netcat, CyberChef, browser Inspector
 - **Objective:** Exploit the web application to find four flags, culminating in a root shell on the host machine.
-
-The landing page is straightforward: buttons to view a dog or a cat. Clicking them appends a `?view` parameter to the URL, which is a classic red flag for Local File Inclusion (LFI).
 
 ---
 
-## Enumeration
+## Reconnaissance & Enumeration
 
-As standard practice, I started with an Nmap scan to map open ports and running services on the target:
+Before attacking any machine, the first step is always to perform our initial reconnaissance to map out exposed ports and running services. I started by running an Nmap scan against the target IP:
 
 ```bash
 nmap -sC -sV -Pn 10.80.184.61
@@ -31,7 +29,9 @@ The scan reveals two open ports:
 - **Port 22/tcp (SSH):** OpenSSH 7.6p1 (Ubuntu)
 - **Port 80/tcp (HTTP):** Apache httpd 2.4.38 (Debian)
 
-With SSH requiring credentials, port 80 is the immediate attack surface.
+With SSH requiring credentials, port 80 is the obvious entry point. 
+
+Navigating to `http://10.80.184.61` in the browser presents a simple gallery with buttons to view a dog or a cat. Clicking them appends a `?view` parameter to the URL (e.g., `?view=dog`), which immediately flags a potential Local File Inclusion (LFI) vulnerability.
 
 ---
 
