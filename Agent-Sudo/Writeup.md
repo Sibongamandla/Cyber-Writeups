@@ -4,7 +4,7 @@ Written by Sibongamandla Mnyandu
 
 ## Introduction
 
-Agent Sudo is a TryHackMe room themed around a secret underground server operated by rogue agents. What starts as a cryptic message about "codenames" on a web page turns into a methodical chain: User-Agent header manipulation to discover an agent's identity, FTP credential brute-forcing, multi-layered steganography to extract hidden messages and passwords, and finally exploiting CVE-2019-14287 — a sudo security bypass — to escalate from a standard user to root.
+Agent Sudo is a TryHackMe room themed around a secret underground server operated by rogue agents. What starts as a cryptic message about "codenames" on a web page turns into a methodical chain of User-Agent header manipulation to discover an agent's identity, FTP credential brute-forcing, multi-layered steganography to extract hidden messages and passwords, and finally exploiting a sudo security bypass (CVE-2019-14287) to escalate from a standard user to root.
 
 This writeup walks through how I rooted the machine on TryHackMe (https://tryhackme.com/room/agentsudo) and recovered both flags.
 
@@ -59,19 +59,21 @@ Gobuster turned up nothing interesting beyond `index.php`, confirming that the U
 
 ### Brute-Forcing the User-Agent with Burp Suite Intruder
 
-Since the agents appear to use single-letter codenames (Agent R signed the message), I intercepted the request in Burp Suite and initially tested with `User-Agent: R`:
+The message was signed by "Agent R", so the codename format seemed to be a single letter. My first instinct was to try `User-Agent: R` since that is the agent who wrote the message. I intercepted the request in Burp Suite and swapped the header:
 
 ![Intercepting the request in Burp Suite with User-Agent set to R](Screenshots/Screenshot%202026-08-23%20at%2018.35.21.png)
 
-This returned a different response — "What are you doing! Are you one of the 25 employees?" — confirming the server is actively checking the User-Agent value. The mention of "25 employees" strongly hinted at the 26 letters of the alphabet:
+This returned a different response: "What are you doing! Are you one of the 25 employees?" This confirmed that the server is actively checking the User-Agent value, but at first the "25 employees" part did not click for me:
 
-![Response when using User-Agent R — mentioning 25 employees](Screenshots/Screenshot%202026-08-23%20at%2018.35.45.png)
+![Response when using User-Agent R, mentioning 25 employees](Screenshots/Screenshot%202026-08-23%20at%2018.35.45.png)
 
-To efficiently test all 26 letters, I used Burp Suite's **Intruder** in Sniper mode, replacing the `User-Agent` value with a payload list of A through Z:
+I decided to try another letter and set the User-Agent to `A`. That request came back with a `200 OK` but no useful content. At that point it clicked: if Agent R's own codename is the letter R, then every agent probably maps to a letter of the alphabet. And "25 employees" makes perfect sense because there are 26 letters in total and Agent R (the sender) is already accounted for, leaving 25 others.
+
+This meant I needed to test every letter from A to Z to find which agent has something interesting behind their page. Doing that manually, one letter at a time, would be tedious. The much faster approach was to automate it using Burp Suite's **Intruder**. I set it to Sniper mode, marked the `User-Agent` value as the payload position, and loaded A through Z as the payload list:
 
 ![Burp Intruder setup with A-Z payload list](Screenshots/Screenshot%202026-08-23%20at%2018.46.39.png)
 
-The Intruder results immediately stood out: while every other letter returned a `200 OK`, the letter **C** returned a `302` redirect with a slightly different response length:
+The Intruder results made the answer obvious: every letter returned a `200 OK` except for the letter **C**, which returned a `302` redirect with a different response length:
 
 ![Intruder results showing C returns a 302 redirect](Screenshots/Screenshot%202026-08-23%20at%2018.47.59.png)
 
@@ -79,11 +81,11 @@ I followed the redirect by setting the `User-Agent` to `C` in Burp's Repeater:
 
 ![Burp Repeater with User-Agent set to C](Screenshots/Screenshot%202026-08-23%20at%2018.49.06.png)
 
-The server redirected to `/agent_C_attention.php`, which exposed a message addressed to **chris** from Agent R. The message mentioned "agent J", a deal, and critically — told chris to change his weak password:
+The server redirected to `/agent_C_attention.php`, which exposed a message addressed to **chris** from Agent R. The message mentioned "agent J", a deal, and told chris to change his weak password:
 
 ![Agent C's attention page revealing the name chris and weak password hint](Screenshots/Screenshot%202026-08-23%20at%2018.49.42.png)
 
-This gave us a confirmed username (`chris`) and a strong signal that his credentials could be brute-forced.
+This gave me a confirmed username (`chris`) and a strong signal that his credentials could be brute-forced.
 
 ---
 
@@ -115,15 +117,15 @@ I downloaded all three files using `mget *`:
 
 ![Downloading all files from FTP](Screenshots/Screenshot%202026-08-23%20at%2019.04.32.png)
 
-Reading `To_agentJ.txt` revealed a note from Agent C to Agent J, explaining that the alien photos are fake and that Agent J's login password is hidden inside one of the pictures using steganography:
+Reading `To_agentJ.txt` revealed a note from Agent C to Agent J, explaining that the alien photos are fake and that Agent J's login password is hidden inside one of the pictures:
 
-![Contents of To_agentJ.txt — login password stored in fake picture](Screenshots/Screenshot%202026-08-23%20at%2019.05.58.png)
+![Contents of To_agentJ.txt, login password stored in a fake picture](Screenshots/Screenshot%202026-08-23%20at%2019.05.58.png)
 
 The two images downloaded were `cute-alien.jpg` and `cutie.png`:
 
-![cute-alien.jpg — a cartoon alien image](Screenshots/Screenshot%202026-08-23%20at%2019.07.31.png)
+![cute-alien.jpg, a cartoon alien image](Screenshots/Screenshot%202026-08-23%20at%2019.07.31.png)
 
-![cutie.png — a green alien sticker](Screenshots/Screenshot%202026-08-23%20at%2019.07.39.png)
+![cutie.png, a green alien sticker](Screenshots/Screenshot%202026-08-23%20at%2019.07.39.png)
 
 ### Extracting Hidden Data from cutie.png
 
@@ -168,7 +170,7 @@ I extracted the zip using `7z`:
 
 ![7z extraction with the cracked password](Screenshots/Screenshot%202026-08-23%20at%2019.22.53.png)
 
-The extracted `To_agentR.txt` contained a message from Agent R to Agent C with an encoded string — `QXJlYTUx`:
+The extracted `To_agentR.txt` contained a message from Agent R to Agent C with an encoded string, `QXJlYTUx`:
 
 ![Listing the extracted files including To_agentR.txt](Screenshots/Screenshot%202026-08-23%20at%2019.26.35.png)
 
@@ -180,9 +182,17 @@ The string `QXJlYTUx` looked like base64. I decoded it using CyberChef, which re
 
 ![CyberChef decoding QXJlYTUx from base64 to Area51](Screenshots/Screenshot%202026-08-23%20at%2019.28.59.png)
 
+At this point I had a decoded string but was not sure what to do with it. The TryHackMe room's next question asked "What is the steg password?" which I did not understand at first. I searched what a "steg password" actually refers to and found that it is a steganography passphrase, a secret key used to lock or unlock data hidden inside an ordinary file like an image:
+
+![Searching what a steg password is](Screenshots/Screenshot%202026-08-23%20at%2019.34.25.png)
+
+![Google results explaining steganography passwords and tools like steghide](Screenshots/Screenshot%202026-08-23%20at%2019.35.16.png)
+
+This told me exactly what I needed to do. The decoded string `Area51` must be the steganography passphrase, and I needed to use `steghide` to extract a hidden message from the `.jpg` image (steghide only works with JPEG and other specific formats, not PNG).
+
 ### Extracting the Hidden Message from cute-alien.jpg
 
-With `Area51` as the steganography passphrase, I used `steghide` on `cute-alien.jpg`. First, I confirmed the embedded data:
+I ran `steghide info` on `cute-alien.jpg` to confirm there was embedded data, entering `Area51` as the passphrase:
 
 ```bash
 steghide info cute-alien.jpg
@@ -190,13 +200,13 @@ steghide info cute-alien.jpg
 
 ![steghide info revealing an embedded message.txt encrypted with rijndael-128](Screenshots/Screenshot%202026-08-23%20at%2019.35.46.png)
 
-Then I extracted the hidden file:
+It confirmed a hidden file called `message.txt` was inside. I extracted it:
 
 ```bash
 steghide extract -sf cute-alien.jpg
 ```
 
-The extracted `message.txt` contained credentials for Agent J — his name is **james** and his SSH password is **hackerrules!**
+The extracted `message.txt` contained credentials for Agent J. His name is **james** and his SSH password is **hackerrules!**
 
 ![steghide extraction revealing james's SSH password: hackerrules!](Screenshots/Screenshot%202026-08-23%20at%2019.37.06.png)
 
@@ -236,9 +246,9 @@ scp james@10.80.143.38:Alien_autospy.jpg .
 
 Opening the image revealed a still from the famous 1947 "alien autopsy" footage:
 
-![The Alien_autospy.jpg image — Roswell alien autopsy still](Screenshots/Screenshot%202026-08-23%20at%2019.59.04.png)
+![The Alien_autospy.jpg image, a Roswell alien autopsy still](Screenshots/Screenshot%202026-08-23%20at%2019.59.04.png)
 
-A reverse image search on Google confirmed this is from the **Roswell alien autopsy** — the answer to the incident question:
+A reverse image search on Google confirmed this is from the **Roswell alien autopsy**, which is the answer to the room's incident question:
 
 ![Google reverse image search confirming Roswell alien autopsy](Screenshots/Screenshot%202026-08-23%20at%2019.59.57.png)
 
@@ -254,7 +264,7 @@ id
 sudo -l
 ```
 
-![Checking sudo permissions — (ALL, !root) /bin/bash](Screenshots/Screenshot%202026-08-23%20at%2020.03.56.png)
+![Checking sudo permissions, (ALL, !root) /bin/bash](Screenshots/Screenshot%202026-08-23%20at%2020.03.56.png)
 
 The output was telling:
 
@@ -263,15 +273,17 @@ User james may run the following commands on agent-sudo:
     (ALL, !root) /bin/bash
 ```
 
-This sudoers rule means james can run `/bin/bash` as **any user except root**. At first glance, this looks like it properly prevents root access. However, this exact configuration is vulnerable to **CVE-2019-14287**.
+This sudoers rule means james can run `/bin/bash` as **any user except root**. At first glance this looks like it properly prevents root access, but I wanted to understand this pattern better and see if there was a way around it.
 
-### Researching CVE-2019-14287
+### Researching the (ALL, !root) Pattern
 
-Searching for the `(ALL, !root)` pattern immediately pointed to a known sudo vulnerability:
+I searched for `(ALL, !root) /bin/bash` to learn more about what this configuration allows and whether it has any known weaknesses. The very first result on Exploit-DB pointed to **CVE-2019-14287**, a sudo security bypass:
 
-![Google search results for the sudo bypass — CVE-2019-14287](Screenshots/Screenshot%202026-08-23%20at%2020.04.35.png)
+![Google search results for the sudo bypass, CVE-2019-14287](Screenshots/Screenshot%202026-08-23%20at%2020.04.35.png)
 
-I confirmed the target was running a vulnerable version of sudo:
+The Exploit-DB page described how specifying user ID `-1` (or `#-1`) tricks sudo into running the command as root. This works because sudo converts `-1` to UID `0` (root) internally, but the exclusion check against `!root` happens *before* that conversion. So the `!root` rule never catches it.
+
+Before attempting the exploit, I needed to confirm the target was actually running a vulnerable version. CVE-2019-14287 affects sudo versions prior to 1.8.28:
 
 ```bash
 sudo --version
@@ -281,13 +293,13 @@ sudo --version
 Sudo version 1.8.21p2
 ```
 
-![Sudo version 1.8.21p2 — vulnerable to CVE-2019-14287](Screenshots/Screenshot%202026-08-23%20at%2020.07.29.png)
+![Sudo version 1.8.21p2, confirmed vulnerable to CVE-2019-14287](Screenshots/Screenshot%202026-08-23%20at%2020.07.29.png)
 
-CVE-2019-14287 affects sudo versions prior to 1.8.28. The vulnerability exists because when `sudo` processes the user ID `-1` (or `4294967295`), it incorrectly converts it to UID `0` (root). This bypasses any `!root` exclusion in the sudoers file because sudo checks the specified ID against the exclusion list **before** the conversion happens.
+Version 1.8.21p2 is well within the vulnerable range, so the exploit should work.
 
-### Exploiting the Vulnerability
+### Exploiting CVE-2019-14287
 
-The exploit is a single command:
+The exploit from the Exploit-DB page is a single command:
 
 ```bash
 sudo -u#-1 /bin/bash
@@ -297,11 +309,11 @@ sudo -u#-1 /bin/bash
 
 Running it as james immediately dropped me into a root shell:
 
-![Root shell obtained — uid=0(root)](Screenshots/Screenshot%202026-08-23%20at%2020.10.32.png)
+![Root shell obtained, uid=0(root)](Screenshots/Screenshot%202026-08-23%20at%2020.10.32.png)
 
 ### Root Flag
 
-From the root shell, I read the final flag:
+With a root shell, the standard next step is to check `/root/root.txt` for the final flag:
 
 ```bash
 cat /root/root.txt
@@ -322,14 +334,14 @@ The message also revealed that **Agent R** is **DesKel**, the room's creator.
 This box chains together several distinct security weaknesses to demonstrate how seemingly minor issues compound into full system compromise:
 
 1. **Information Disclosure via HTTP Headers:** The web application's reliance on User-Agent-based access control leaked agent identities. A simple Burp Suite Intruder sweep through the alphabet exposed the username `chris` and the structure of the agent naming scheme.
-2. **Weak Credentials & Brute-Force Exposure:** Agent C's FTP password (`crystal`) fell to a basic dictionary attack in seconds. Publicly-exposed services with weak passwords are low-hanging fruit for attackers.
+2. **Weak Credentials & Brute-Force Exposure:** Agent C's FTP password (`crystal`) fell to a basic dictionary attack in seconds. Publicly exposed services with weak passwords are low-hanging fruit for attackers.
 3. **Steganography as Obfuscation, Not Security:** Hiding credentials inside images and behind base64 encoding only adds inconvenience, not protection. Once the images were accessible, standard forensic tools (binwalk, zip2john, steghide) extracted everything with minimal effort.
-4. **Unpatched Software (CVE-2019-14287):** The most critical failure. The sudoers configuration `(ALL, !root) /bin/bash` was intended to prevent root access, but the server ran sudo 1.8.21p2 — vulnerable to a trivial bypass. A single `sudo -u#-1 /bin/bash` command negated the entire privilege restriction. Patching sudo to version 1.8.28+ would have prevented this escalation entirely.
+4. **Unpatched Software (CVE-2019-14287):** The most critical failure. The sudoers configuration `(ALL, !root) /bin/bash` was intended to prevent root access, but the server ran sudo 1.8.21p2 which is vulnerable to a trivial bypass. A single `sudo -u#-1 /bin/bash` command negated the entire privilege restriction. Patching sudo to version 1.8.28+ would have prevented this escalation entirely.
 
 ## References
 
 - [TryHackMe: Agent Sudo](https://tryhackme.com/room/agentsudo)
-- [CVE-2019-14287 — sudo Security Bypass](https://nvd.nist.gov/vuln/detail/CVE-2019-14287)
+- [CVE-2019-14287, sudo Security Bypass](https://nvd.nist.gov/vuln/detail/CVE-2019-14287)
 - [Exploit-DB: sudo 1.8.27 Security Bypass](https://www.exploit-db.com/exploits/47502)
 - [Steghide Documentation](https://steghide.sourceforge.net/)
 - [Binwalk Firmware Analysis Tool](https://github.com/ReFirmLabs/binwalk)
