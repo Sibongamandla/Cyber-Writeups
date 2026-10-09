@@ -2,7 +2,7 @@ Written by Sibongamandla Mnyandu
 
 # Imgurr Web Application — Security Assessment Report
 
-**Prepared by:** Nhlanhla Mnyandu — associate consultant
+**Prepared by:** Sibongamandla Mnyandu — associate consultant
 **TryHackMe username (exam activation value):** `Sibz`
 **Engagement:** MWR CyberSec intern onboarding — web application assessment
 **Testing performed:** 8–9 October 2026
