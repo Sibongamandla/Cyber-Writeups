@@ -16,6 +16,7 @@ More writeups coming as I work through new rooms.
 | [Pickle Rick](./Pickle-Rick-CTF/Pickle-Rick-Writeup.md) | TryHackMe | Web Enumeration, Command Injection, Privilege Escalation |
 | [Agent Sudo](./Agent-Sudo/Writeup.md) | TryHackMe | User-Agent Enumeration, FTP Brute-Force, Steganography, CVE-2019-14287 Sudo Bypass |
 | [DogCat](./DogCat/Writeup.md) | TryHackMe | Local File Inclusion (LFI), Apache Log Poisoning, Privilege Escalation, Docker Container Escape |
+| [Imgurr Web App Assessment](./MWR%20Online%20Assessment/Writeup.md) | MWR CyberSec | Stored XSS, Path Traversal, JWT Weak Secret, SQL Injection, Default Admin Credentials, Privilege Escalation, Unrestricted File Upload |
 
 
 ---
